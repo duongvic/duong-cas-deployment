@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-nginx
+  namespace: backend
+  labels:
+    app: backend-nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-nginx
+  template:
+    metadata:
+      labels:
+        app: backend-nginx
+        node: backend
+    spec:
+      containers:
+        - name: backend-nginx
+          image: nginx:alpine
+          ports:
+            - name: http
+              containerPort: 80
+            - name: https
+              containerPort: 443
+          livenessProbe:
+            exec:
+              command:
+                - "true"
+            initialDelaySeconds: 10
+            periodSeconds: 60
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 120

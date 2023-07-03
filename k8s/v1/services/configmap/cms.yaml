@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cascms-config
+  namespace: backend
+  labels:
+    app: cascms-config
+data:
+  default.conf: |
+    upstream cms-portal {
+      server cascms-portal:1337;
+    }
+
+    server {
+      listen 80;
+      server_name cms.fptcompute.com.vn;
+      location / {
+        proxy_pass http://cms-portal;
+      }
+    }

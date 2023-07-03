@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cas-order
+  namespace: cas-v2
+  labels:
+    app: cas-order
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 8090
+    targetPort: 8090
+  selector:
+    app: cas-order
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cas-order
+  namespace: cas-v2
+  labels:
+    app: cas-order
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cas-order
+  template:
+    metadata:
+      labels:
+        app: cas-order
+        node: cas-v2
+    spec:
+      containers:
+      - name: cas-order
+        image: reg.fptcompute.com.vn/cas-v2/casorder-be:0.
+        imagePullPolicy: Always
+        command: ["order-api"]
+        ports:
+        - name: cas-order-p
+          containerPort: 8090
+        resources:
+          requests:
+            memory: 500Mi
+            cpu: 250m
+          limits:
+            memory: 1Gi
+            cpu: 1000m
+        volumeMounts:
+        - name: cas-order-log
+          mountPath: /var/log/cas/
+          readOnly: false
+        - name: cas-order-cfg-vol
+          mountPath: /etc/cas/
+          readOnly: true
+      volumes:
+      - name: cas-order-log
+      - name: cas-order-cfg-vol
+        configMap:
+          name: cas-order-config
+      imagePullSecrets:
+      - name: privatereg
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cas-order-scaler
+  namespace: cas-v2 
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cas-order
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Pods
+      pods:
+        metric:
+          name: requests-per-second
+        target:
+          type: AverageValue
+          averageValue: 1k

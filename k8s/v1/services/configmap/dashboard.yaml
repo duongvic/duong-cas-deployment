@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: casdb-config
+  namespace: backend
+  labels:
+    app: casdb-config
+data:
+  default.conf: |
+    server {
+      listen 80;
+      listen [::]:80;
+
+      root /usr/share/nginx/html;
+      index index.html index.htm index.nginx-debian.html;
+
+      server_name fptcompute.com.vn www.fptcompute.com.vn;
+      error_page 404 /;
+      location / {
+        proxy_set_header   X-Forwarded-For $remote_addr;
+        proxy_set_header   Host $http_host;
+      }
+    }

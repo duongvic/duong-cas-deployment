@@ -1,0 +1,5 @@
+[[runners]]
+url = "http://172.16.0.116/"
+token = "ZpmGk4pxznsB7aVxi1sL"
+[runners.docker]
+image = "alpine:latest"

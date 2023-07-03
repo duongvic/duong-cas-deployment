@@ -1,0 +1,241 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: casorder-config
+  namespace: backend
+  labels:
+    app: casorder-config
+data:
+  cas.conf: |
+    [DEFAULT]
+    # Show debugging output in logs (sets DEBUG log level output)
+    debug = True
+
+    # Address to bind the API server
+    bind_host = 0.0.0.0
+
+    # Port the bind the API server to
+    bind_port = 5000
+
+    transport_url = rabbit://portal:kgDY2CYUJpYEi45V@rabbitmq:5672/
+
+    # Taskmanager queue name
+    taskmanager_queue = order_taskmanager
+
+    require_user_level = 0
+
+    [service_credential]
+    # auth configuration
+    auth_host = casauth
+    auth_transport_url = rabbit://portal:kgDY2CYUJpYEi45V@rabbitmq:5672/
+    auth_taskmanager_queue = auth_taskmanager
+    auth_grpc_port = 50051
+
+    [database]
+    connection = mysql+pymysql://admin:n27dW2UYqmAuPS4vF3GH@casorder-mariadb/cascloud?charset=utf8mb4
+    idle_timeout = 3600
+
+    [wsgi]
+    api_secret_key = Fti-Cas-82~d9^&(@!#6%1*7
+    app_env = development
+    log_level = DEBUG
+    access_token_expiration = 30
+    permanent_session_lifetime = 30
+    default_limits = 100,10000
+
+    [policy]
+    trial_time = 14
+    order_code_prefix = CASOR
+    trans_code_prefix = CASTRANS
+  data.json: |
+    {
+      "os_products": [
+        {
+          "name": "Centos 7",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 0,
+          "data": {
+            "arch": "x64",
+            "type": "centos",
+            "version": "7",
+            "platform": "server",
+            "backend_name": "centos-7-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Centos 8",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 0,
+          "data": {
+            "arch": "x64",
+            "type": "centos",
+            "version": "8",
+            "platform": "server",
+            "backend_name": "centos-8-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Ubuntu 18",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 0,
+          "data": {
+            "arch": "x64",
+            "type": "ubuntu",
+            "version": "18",
+            "platform": "server",
+            "backend_name": "ubuntu-18-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Ubuntu 20",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 0,
+          "data": {
+            "arch": "x64",
+            "type": "ubuntu",
+            "version": "20",
+            "platform": "server",
+            "backend_name": "ubuntu-20-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Window 12",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 600000,
+          "data": {
+            "arch": "x64",
+            "type": "window",
+            "version": "12",
+            "platform": "server",
+            "backend_name": "window-12-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Window 16",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 600000,
+          "data": {
+            "arch": "x64",
+            "type": "window",
+            "version": "16",
+            "platform": "server",
+            "backend_name": "window-16-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Window 19",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 600000,
+          "data": {
+            "arch": "x64",
+            "type": "window",
+            "version": "19",
+            "platform": "server",
+            "backend_name": "window-19-1-x86_64-server"
+          }
+        }
+      ],
+      "packages": [
+        {
+          "name": "F.Basic-1",
+          "type": "STANDARD",
+          "trial_time": 14,
+          "init_fee": 0,
+          "maintenance_fee": 400000,
+          "products": {
+            "vcpu": 1,
+            "ram": 2,
+            "disk": 40,
+            "ip": 1,
+            "net": 100
+          }
+        },
+        {
+          "name": "F.Basic-2",
+          "type": "STANDARD",
+          "trial_time": 0,
+          "init_fee": 0,
+          "maintenance_fee": 600000,
+          "priority": 1,
+          "products": {
+            "vcpu": 2,
+            "ram": 4,
+            "disk": 60,
+            "ip": 1,
+            "net": 100
+          }
+        },
+        {
+          "name": "F.Basic-3",
+          "type": "STANDARD",
+          "trial_time": 0,
+          "init_fee": 0,
+          "maintenance_fee": 1150000,
+          "priority": 1,
+          "products": {
+            "vcpu": 4,
+            "ram": 8,
+            "disk": 100,
+            "ip": 1,
+            "net": 100
+          }
+        },
+        {
+          "name": "F.Medium-1",
+          "type": "ADVANCED",
+          "trial_time": 0,
+          "init_fee": 0,
+          "maintenance_fee": 2700000,
+          "products": {
+            "vcpu": 6,
+            "ram": 12,
+            "disk": 200,
+            "backup": 150,
+            "snapshot": 50,
+            "ip": 1,
+            "net": 100
+          }
+        },
+        {
+          "name": "F.Medium-2",
+          "trial_time": 0,
+          "type": "ADVANCED",
+          "init_fee": 0,
+          "maintenance_fee": 2900000,
+          "priority": 1,
+          "products": {
+            "vcpu": 7,
+            "ram": 16,
+            "disk": 300,
+            "backup": 200,
+            "snapshot": 100,
+            "ip": 1,
+            "net": 100
+          }
+        },
+        {
+          "name": "F.Medium-3",
+          "type": "ADVANCED",
+          "trial_time": 0,
+          "init_fee": 0,
+          "maintenance_fee": 5700000,
+          "products": {
+            "vcpu": 10,
+            "ram": 24,
+            "disk": 500,
+            "backup": 300,
+            "snapshot": 200,
+            "ip": 1,
+            "net": 100
+          }
+        }
+      ]
+    }
+

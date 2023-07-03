@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cascms-portal
+  namespace: backend
+  labels:
+    app: cascms-portal
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cascms-portal
+  template:
+    metadata:
+      labels:
+        app: cascms-portal
+        node: backend
+    spec:
+      containers:
+      - name: cascms-portal
+        image: reg.fptcompute.com.vn/dev/cascms:0.1
+        ports:
+        - name: cascms-portal-p
+          containerPort: 1337
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 100m
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+        volumeMounts:
+          - mountPath: /app/.tmp/
+            name: cascms-db-data
+      imagePullSecrets:
+      - name: privatereg
+      volumes:
+        - name: cascms-db-data
+          persistentVolumeClaim:
+            claimName: cascms-db-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cascms-portal
+  namespace: backend
+  labels:
+    app: cascms-portal
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 1337
+    targetPort: 1337
+  selector:
+    app: cascms-portal
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cascms
+  namespace: backend
+  labels:
+    app: cascms
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 172.16.4.206
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: cascms
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cascms
+  namespace: backend
+  labels:
+    app: cascms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cascms
+  template:
+    metadata:
+      labels:
+        app: cascms
+        node: backend
+    spec:
+      containers:
+      - name: cascms
+        image: nginx:1.19.9
+        ports:
+        - name: cascms-p
+          containerPort: 80
+        # command: [ "yarn", "develop" ]
+        # args: [ "while true; do sleep 30; done;" ]
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 100m
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+        volumeMounts:
+        - name: cascms-cfg-vol
+          mountPath: /etc/nginx/conf.d/
+          readOnly: false
+      imagePullSecrets:
+      - name: privatereg
+      volumes:
+      - name: cascms-cfg-vol
+        configMap:
+          name: cascms-config
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cascms-portal-scaler
+  namespace: backend 
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cascms-portal
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Pods
+      pods:
+        metric:
+          name: requests-per-second
+        target:
+          type: AverageValue
+          averageValue: 1k

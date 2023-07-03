@@ -1,0 +1,9 @@
+upstream docker-registry {
+    server registry:5000;
+}
+
+server {
+    listen 80;
+    server_name fptcompute.com.vn;
+    return 301 https://fptcompute.com.vn$request_uri;
+}

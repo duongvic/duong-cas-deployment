@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: casvdc-config
+  namespace: backend
+  labels:
+    app: casvdc-config
+data:
+  cas.conf: |
+    [DEFAULT]
+    # Show debugging output in logs (sets DEBUG log level output)
+    debug = True
+
+    # Address to bind the API server
+    bind_host = 0.0.0.0
+
+    # Port the bind the API server to
+    bind_port = 5000
+
+    transport_url = rabbit://portal:kgDY2CYUJpYEi45V@rabbitmq:5672/
+
+    # Taskmanager queue name
+    taskmanager_queue = vdc_taskmanager
+
+    require_user_level = 0
+
+    default_compute_user = root
+    admin_mail_address = trongkhanh.chu@gmail.com
+
+    [cache]
+    enabled = False
+
+
+    [service_mail]
+    mail_host = casmail
+    mail_grpc_port = 50051
+    mail_taskmanager_queue = mail_taskmanager
+    mail_transport_url = rabbit://portal:kgDY2CYUJpYEi45V@rabbitmq:5672/
+
+    [service_credential]
+    auth_host = casauth
+    auth_taskmanager_queue = auth_taskmanager
+    auth_transport_url = rabbit://portal:kgDY2CYUJpYEi45V@rabbitmq:5672/
+
+
+    [service_order]
+    order_host = casorder
+    order_taskmanager_queue = order_taskmanager
+    order_transport_url = rabbit://portal:kgDY2CYUJpYEi45V@rabbitmq:5672/
+
+    [database]
+    connection = mysql+pymysql://admin:Cas@2020@casvdc-mariadb/cascloud?charset=utf8mb4
+    idle_timeout = 3600
+
+    [wsgi]
+    api_secret_key = Fti-Cas-82~d9^&(@!#6%1*7
+    app_env = development
+    log_level = DEBUG
+    use_sentry = False
+    workers = 3
+    access_token_expiration = 30
+    permanent_session_lifetime = 30
+    default_limits = 100,1000

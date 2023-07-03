@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: casbackup-db
+  namespace: backend
+  labels:
+    app: casbackup-db
+data:
+  auth.cnf: |
+    [client]
+    password='Cas@2020'
+  auth.sh: |
+    #!/bin/bash
+    export DB_NAME=cascloud
+    export DB_USER=root
+    export DB_PASS=Cas@2020
+    export DB_HOST=casauth-mariadb
+
+    /bin/mysqldump --defaults-file=/configs/auth.cnf -h ${DB_HOST} -u $DB_USER $DB_NAME > /backups/$DB_HOST-$(date +%Y%m%d%H%M).sql 2>> /logs/$DB_HOST.log
+

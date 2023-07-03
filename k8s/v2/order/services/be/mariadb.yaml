@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cas-order-mariadb
+  namespace: cas-v2
+  labels:
+    app: cas-order-mariadb
+spec:
+  type: NodePort
+  ports:
+    - name: cas-order-mariadb
+      port: 3306
+      targetPort: 3306
+  selector:
+    app: cas-order-mariadb
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cas-order-mariadb-data
+  namespace: cas-v2
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 40Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cas-order-mariadb
+  namespace: cas-v2
+  labels:
+    app: cas-order-mariadb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cas-order-mariadb
+  template:
+    metadata:
+      labels:
+        app: cas-order-mariadb
+        node: cas-v2
+    spec:
+      containers:
+        - name: cas-order-mariadb
+          image: mariadb
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: cas-order-db-p
+              containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: password
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: database
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: cas-order-data-storage
+          resources:
+            requests:
+              memory: 500Mi
+              cpu: 250m
+            limits:
+              memory: 2Gi
+              cpu: 500m
+      volumes:
+        - name: cas-order-data-storage
+          persistentVolumeClaim:
+            claimName: cas-order-mariadb-data
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cas-order-mariadb-migrations
+  namespace: cas-v2
+spec:
+  template:
+    metadata:
+      name: cas-order-mariadb-migrations
+    spec:
+      containers:
+      - image: reg.fptcompute.com.vn/cas-v2/casorder-be:0.1
+        imagePullPolicy: Always
+        name: cas-order-mariadb-migrations
+        command: ['order-manage', 'db-migrate']
+        volumeMounts:
+        - name: cas-order-mg-vol
+          mountPath: /etc/cas/
+          readOnly: true
+      imagePullSecrets:
+      - name: privatereg
+      volumes:
+      - name: cas-order-mg-vol
+        configMap:
+          name: cas-order-config
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - until nc -zv $DB_HOST $DB_PORT -w1; do echo 'waiting for db'; sleep 1; done
+        env:
+        - name: DB_HOST
+          value: cas-order-mariadb
+        - name: DB_PORT
+          value: "3306"
+        image: busybox
+        name: wait-for-mariadb
+      restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cas-order-mariadb-seed
+  namespace: cas-v2
+spec:
+  template:
+    metadata:
+      name: cas-order-mariadb-seed
+    spec:
+      containers:
+      - image: reg.fptcompute.com.vn/cas-v2/casorder-be:0.1
+        imagePullPolicy: Always
+        name: cas-order-mariadb-seed
+        command: ['order-manage', 'db-seed']
+        volumeMounts:
+        - name: cas-order-it-vol
+          mountPath: /etc/cas/
+          readOnly: true
+      imagePullSecrets:
+      - name: privatereg
+      volumes:
+      - name: cas-order-it-vol
+        configMap:
+          name: cas-order-config
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - until nc -zv $DB_HOST $DB_PORT -w1; do echo 'waiting for db'; sleep 20; done
+        env:
+        - name: DB_HOST
+          value: cas-order-mariadb
+        - name: DB_PORT
+          value: "3306"
+        image: busybox
+        name: wait-for-mariadb
+      restartPolicy: OnFailure

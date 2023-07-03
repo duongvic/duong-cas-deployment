@@ -1,0 +1,75 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: konga
+  namespace: kong
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: konga
+        app: konga
+    spec:
+      containers:
+      - name: konga
+        image: pantsel/konga
+        ports:
+        - containerPort: 1337
+        env:
+          - name: TOKEN_SECRET
+            value: 
+          - name: DB_ADAPTER
+            value: postgres
+          - name: DB_HOST
+            value: postgres
+          - name: DB_PORT
+            value: 5432
+          - name: DB_DATABASE
+            value: konga
+          - name: DB_USER
+            value: postgres
+          - name: DB_PASSWORD
+            value: kong
+          - name: NODE_ENV
+            value: production
+          - name: KONGA_HOOK_TIMEOUT
+            value: 10000
+        # - env:
+        #   - name: KONG_DATABASE
+        #     value: postgres
+        #   - name: KONG_PG_HOST
+        #     value: postgres
+        #   - name: KONG_PG_PASSWORD
+        #     value: kong
+        #   - name: KONG_PROXY_LISTEN
+        #     value: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+        #   - name: KONG_PORT_MAPS
+        #     value: 80:8000, 443:8443
+        #   - name: KONG_ADMIN_LISTEN
+        #     value: 127.0.0.1:8444 ssl
+        #   - name: KONG_STATUS_LISTEN
+        #     value: 0.0.0.0:81001
+        #   - name: KONG_NGINX_WORKER_PROCESSES
+        #     value: "2"
+        #   - name: KONG_ADMIN_ACCESS_LOG
+        #     value: /dev/stdout
+        #   - name: KONG_ADMIN_ERROR_LOG
+        #     value: /dev/stderr
+        #   - name: KONG_PROXY_ERROR_LOG
+        #     value: /dev/stderr
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: konga-svc
+spec:
+  type: NodePort
+  ports:
+  - name: kong-proxy
+    port: 1337
+    targetPort: 1337
+    nodePort: 30337
+    protocol: TCP
+  selector:
+    app: konga

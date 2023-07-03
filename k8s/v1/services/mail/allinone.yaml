@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: casmail
+  namespace: backend
+  labels:
+    app: casmail
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 50051
+    targetPort: 50051
+  selector:
+    app: casmail
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: casmail
+  namespace: backend
+  labels:
+    app: casmail
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: casmail
+  template:
+    metadata:
+      labels:
+        app: casmail
+        node: backend
+    spec:
+      containers:
+      - name: casmail-task-manager
+        image: reg.fptcompute.com.vn/dev/casmail:0.1
+        imagePullPolicy: Always
+        command: ["mail-tm", "--log-file=/var/log/cas/tm.log"]
+        resources:
+          requests:
+            memory: 500Mi
+            cpu: 250m
+          limits:
+            memory: 1Gi
+            cpu: 2000m
+        volumeMounts:
+        - name: casmail-tm-log
+          mountPath: /var/log/cas/
+          readOnly: false
+        - name: casmail-cfg-vol
+          mountPath: /etc/cas/
+          readOnly: true
+        env:
+        - name: MAIL_PASSWORD
+          value: "&&/[^e;*r-49abs8@"
+      volumes:
+      - name: casmail-tm-log
+      - name: casmail-cfg-vol
+        configMap:
+          name: casmail-config
+      imagePullSecrets:
+      - name: privatereg
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: casmail-scaler
+  namespace: backend 
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: casmail
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Pods
+      pods:
+        metric:
+          name: requests-per-second
+        target:
+          type: AverageValue
+          averageValue: 1k

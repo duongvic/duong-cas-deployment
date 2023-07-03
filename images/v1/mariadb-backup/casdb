@@ -1,0 +1,3 @@
+0 21 * * * /configs/auth.sh
+0 21 * * * /configs/order.sh
+0 21 * * * /configs/vdc.sh

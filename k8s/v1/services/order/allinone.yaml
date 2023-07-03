@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: casorder
+  namespace: backend
+  labels:
+    app: casorder
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 5000
+    targetPort: 5000
+  selector:
+    app: casorder
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: casorder
+  namespace: backend
+  labels:
+    app: casorder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: casorder
+  template:
+    metadata:
+      labels:
+        app: casorder
+        node: backend
+    spec:
+      containers:
+      - name: casorder-api
+        image: reg.fptcompute.com.vn/dev/casorder:0.1
+        command: ["order-api", "--log-file=/var/log/cas/api.log"]
+        ports:
+        - name: casorder-api-p
+          containerPort: 5000
+        resources:
+          requests:
+            memory: 500Mi
+            cpu: 1000m
+          limits:
+            memory: 1Gi
+            cpu: 2000m
+        volumeMounts:
+        - name: casorder-api-log
+          mountPath: /var/log/cas/
+          readOnly: false
+        - name: casorder-cfg-vol
+          mountPath: /etc/cas/
+          readOnly: true
+      - name: casorder-task-manager
+        image: reg.fptcompute.com.vn/dev/casorder:0.1
+        command: ["order-tm", "--log-file=/var/log/cas/tm.log"]
+        resources:
+          requests:
+            memory: 500Mi
+            cpu: 1000m
+          limits:
+            memory: 1Gi
+            cpu: 2000m
+        volumeMounts:
+        - name: casorder-tm-log
+          mountPath: /var/log/cas/
+          readOnly: false
+        - name: casorder-cfg-vol
+          mountPath: /etc/cas/
+          readOnly: true
+      volumes:
+      - name: casorder-api-log
+      - name: casorder-tm-log
+      - name: casorder-cfg-vol
+        configMap:
+          name: casorder-config
+      imagePullSecrets:
+      - name: privatereg
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: casorder-scaler
+  namespace: backend 
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: casorder
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Pods
+      pods:
+        metric:
+          name: requests-per-second
+        target:
+          type: AverageValue
+          averageValue: 1k

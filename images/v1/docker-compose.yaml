@@ -1,0 +1,18 @@
+version: '3'
+services:
+  registry:
+    image: registry:2
+    restart: on-failure
+    # environment:
+    #   REGISTRY_AUTH: htpasswd
+    #   REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+    #   REGISTRY_AUTH_HTPASSWD_PATH: /auth/registry.password
+
+    ports:
+      - 5000:5000
+    volumes:
+      - registry-vol:/data
+
+volumes:
+  registry-vol:
+    driver: local

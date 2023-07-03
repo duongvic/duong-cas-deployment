@@ -1,0 +1,235 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cas-order-config
+  namespace: cas-v2
+  labels:
+    app: cas-order-config
+data:
+  config.toml: |
+    [mariadb]
+    address  = "cas-order-mariadb"
+    username = "admin"
+    password = "XVBYHTNw3Gg3TexQr5hb"
+    port     = 3306
+    database = "casorder"
+
+    [server]
+    ip = "0.0.0.0"
+    port = 8090
+
+    [environment]
+    mode = "production"
+
+    [logging]
+    mode = "info"
+    logFolder = "/var/log/cas/"
+    logFile = "casorder.log"
+
+    [token]
+    key="secret"
+    expire = 2
+
+    [grpc]
+    host = "127.0.0.1"
+    port = "50051"
+
+    [miq_grpc]
+    host = "172.16.4.120"
+    port = "50052"
+
+    [mail_grpc]
+    host = "casmail.backend.svc.cluster.local"
+    port = "50051"
+  data.json: |
+    {
+      "os_products": [
+        {
+          "name": "Centos 7",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 0,
+          "data": {
+            "arch": "x64",
+            "type": "centos",
+            "version": "7",
+            "platform": "server",
+            "backend_name": "centos-7-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Centos 8",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 0,
+          "data": {
+            "arch": "x64",
+            "type": "centos",
+            "version": "8",
+            "platform": "server",
+            "backend_name": "centos-8-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Ubuntu 18",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 0,
+          "data": {
+            "arch": "x64",
+            "type": "ubuntu",
+            "version": "18",
+            "platform": "server",
+            "backend_name": "ubuntu-18-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Ubuntu 20",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 0,
+          "data": {
+            "arch": "x64",
+            "type": "ubuntu",
+            "version": "20",
+            "platform": "server",
+            "backend_name": "ubuntu-20-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Window 12",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 600000,
+          "data": {
+            "arch": "x64",
+            "type": "window",
+            "version": "12",
+            "platform": "server",
+            "backend_name": "window-12-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Window 16",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 600000,
+          "data": {
+            "arch": "x64",
+            "type": "window",
+            "version": "16",
+            "platform": "server",
+            "backend_name": "window-16-1-x86_64-server"
+          }
+        },
+        {
+          "name": "Window 19",
+          "description": "",
+          "init_fee": 0,
+          "maintenance_fee": 600000,
+          "data": {
+            "arch": "x64",
+            "type": "window",
+            "version": "19",
+            "platform": "server",
+            "backend_name": "window-19-1-x86_64-server"
+          }
+        }
+      ],
+      "packages": [
+        {
+          "name": "F.Basic-1",
+          "type": "STANDARD",
+          "trial_time": 14,
+          "init_fee": 0,
+          "maintenance_fee": 400000,
+          "products": {
+            "vcpu": 1,
+            "ram": 2,
+            "disk": 40,
+            "ip": 1,
+            "net": 100
+          }
+        },
+        {
+          "name": "F.Basic-2",
+          "type": "STANDARD",
+          "trial_time": 0,
+          "init_fee": 0,
+          "maintenance_fee": 600000,
+          "priority": 1,
+          "products": {
+            "vcpu": 2,
+            "ram": 4,
+            "disk": 60,
+            "ip": 1,
+            "net": 100
+          }
+        },
+        {
+          "name": "F.Basic-3",
+          "type": "STANDARD",
+          "trial_time": 0,
+          "init_fee": 0,
+          "maintenance_fee": 1150000,
+          "priority": 1,
+          "products": {
+            "vcpu": 4,
+            "ram": 8,
+            "disk": 100,
+            "ip": 1,
+            "net": 100
+          }
+        },
+        {
+          "name": "F.Medium-1",
+          "type": "ADVANCED",
+          "trial_time": 0,
+          "init_fee": 0,
+          "maintenance_fee": 2700000,
+          "products": {
+            "vcpu": 6,
+            "ram": 12,
+            "disk": 200,
+            "backup": 150,
+            "snapshot": 50,
+            "ip": 1,
+            "net": 100
+          }
+        },
+        {
+          "name": "F.Medium-2",
+          "trial_time": 0,
+          "type": "ADVANCED",
+          "init_fee": 0,
+          "maintenance_fee": 2900000,
+          "priority": 1,
+          "products": {
+            "vcpu": 7,
+            "ram": 16,
+            "disk": 300,
+            "backup": 200,
+            "snapshot": 100,
+            "ip": 1,
+            "net": 100
+          }
+        },
+        {
+          "name": "F.Medium-3",
+          "type": "ADVANCED",
+          "trial_time": 0,
+          "init_fee": 0,
+          "maintenance_fee": 5700000,
+          "products": {
+            "vcpu": 10,
+            "ram": 24,
+            "disk": 500,
+            "backup": 300,
+            "snapshot": 200,
+            "ip": 1,
+            "net": 100
+          }
+        }
+      ]
+    }
+

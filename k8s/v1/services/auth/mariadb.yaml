@@ -1,0 +1,165 @@
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: casauth-mariadb
+#   namespace: backend
+#   labels:
+#     app: casauth-mariadb
+# spec:
+#   type: NodePort
+#   ports:
+#     - name: casauth-mariadb
+#       port: 3306
+#       targetPort: 3306
+#   selector:
+#     app: casauth-db
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: casauth-db-data
+#   namespace: backend
+# spec:
+#   storageClassName: local-path
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 40Gi
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: casauth-db
+#   namespace: backend
+#   labels:
+#     app: casauth-db
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: casauth-db
+#   template:
+#     metadata:
+#       labels:
+#         app: casauth-db
+#         node: backend
+#     spec:
+#       containers:
+#         - name: casauth-db
+#           image: mariadb
+#           imagePullPolicy: IfNotPresent
+#           ports:
+#             - name: casauth-db-p
+#               containerPort: 3306
+#           env:
+#             - name: MYSQL_ROOT_PASSWORD
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: mariadb
+#                   key: password
+#             - name: MYSQL_USER
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: mariadb
+#                   key: user
+#             - name: MYSQL_PASSWORD
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: mariadb
+#                   key: password
+#             - name: MYSQL_DATABASE
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: mariadb
+#                   key: database
+#           volumeMounts:
+#             - mountPath: /var/lib/mysql
+#               name: casauth-data-storage
+#           resources:
+#             requests:
+#               memory: 1500Mi
+#               cpu: 200m
+#             limits:
+#               memory: 2Gi
+#               cpu: 300m
+#       volumes:
+#         - name: casauth-data-storage
+#           persistentVolumeClaim:
+#             claimName: casauth-db-data
+# ---
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: casauth-db-migrations
+#   namespace: backend
+# spec:
+#   template:
+#     metadata:
+#       name: casauth-db-migrations
+#     spec:
+#       containers:
+#       - image: reg.fptcompute.com.vn/dev/casauth:0.1
+#         name: casauth-db-migrations
+#         command: ['auth-manage', 'db_reset']
+#         volumeMounts:
+#         - name: casauth-mg-vol
+#           mountPath: /etc/cas/
+#           readOnly: true
+#       imagePullSecrets:
+#       - name: privatereg
+#       volumes:
+#       - name: casauth-mg-vol
+#         configMap:
+#           name: casauth-config
+#       initContainers:
+#       - command:
+#         - /bin/sh
+#         - -c
+#         - until nc -zv $DB_HOST $DB_PORT -w1; do echo 'waiting for db'; sleep 1; done
+#         env:
+#         - name: DB_HOST
+#           value: casauth-mariadb
+#         - name: DB_PORT
+#           value: "3306"
+#         image: busybox
+#         name: wait-for-mariadb
+#       restartPolicy: OnFailure
+# ---
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: casauth-db-init-data
+#   namespace: backend
+# spec:
+#   template:
+#     metadata:
+#       name: casauth-db-init-data
+#     spec:
+#       containers:
+#       - image: reg.fptcompute.com.vn/dev/casauth:0.1
+#         name: casauth-db-init-data
+#         command: ['auth-manage', 'db_data']
+#         volumeMounts:
+#         - name: casauth-it-vol
+#           mountPath: /etc/cas/
+#           readOnly: true
+#       imagePullSecrets:
+#       - name: privatereg
+#       volumes:
+#       - name: casauth-it-vol
+#         configMap:
+#           name: casauth-config
+#       initContainers:
+#       - command:
+#         - /bin/sh
+#         - -c
+#         - until nc -zv $DB_HOST $DB_PORT -w1; do echo 'waiting for db'; sleep 1; done
+#         env:
+#         - name: DB_HOST
+#           value: casauth-mariadb
+#         - name: DB_PORT
+#           value: "3306"
+#         image: busybox
+#         name: wait-for-mariadb
+#       restartPolicy: OnFailure

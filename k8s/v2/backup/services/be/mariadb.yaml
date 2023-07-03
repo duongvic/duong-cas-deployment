@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cas-backup-mariadb
+  namespace: cas-backup-v2
+  labels:
+    app: cas-backup-mariadb
+spec:
+  type: NodePort
+  ports:
+    - name: cas-backup-mariadb
+      port: 3306
+      targetPort: 3306
+  selector:
+    app: cas-backup-mariadb
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cas-backup-mariadb-data
+  namespace: cas-backup-v2
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 40Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cas-backup-mariadb
+  namespace: cas-backup-v2
+  labels:
+    app: cas-backup-mariadb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cas-backup-mariadb
+  template:
+    metadata:
+      labels:
+        app: cas-backup-mariadb
+        node: cas-backup-v2
+    spec:
+      containers:
+        - name: cas-backup-mariadb
+          image: mariadb
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: cas-backup-db-p
+              containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: password
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: database
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: cas-backup-data-storage
+          resources:
+            requests:
+              memory: 500Mi
+              cpu: 250m
+            limits:
+              memory: 2Gi
+              cpu: 500m
+      volumes:
+        - name: cas-backup-data-storage
+          persistentVolumeClaim:
+            claimName: cas-backup-mariadb-data
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cas-backup-mariadb-migrations
+  namespace: cas-backup-v2
+spec:
+  template:
+    metadata:
+      name: cas-backup-mariadb-migrations
+    spec:
+      containers:
+      - image: reg.fptcompute.com.vn/cas-backup-v2/casorder-be:0.1
+        imagePullPolicy: Always
+        name: cas-backup-mariadb-migrations
+        command: ['order-manage', 'db-migrate']
+        volumeMounts:
+        - name: cas-backup-mg-vol
+          mountPath: /etc/cas/
+          readOnly: true
+      imagePullSecrets:
+      - name: privatereg
+      volumes:
+      - name: cas-backup-mg-vol
+        configMap:
+          name: cas-backup-config
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - until nc -zv $DB_HOST $DB_PORT -w1; do echo 'waiting for db'; sleep 1; done
+        env:
+        - name: DB_HOST
+          value: cas-backup-mariadb
+        - name: DB_PORT
+          value: "3306"
+        image: busybox
+        name: wait-for-mariadb
+      restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cas-backup-mariadb-seed
+  namespace: cas-backup-v2
+spec:
+  template:
+    metadata:
+      name: cas-backup-mariadb-seed
+    spec:
+      containers:
+      - image: reg.fptcompute.com.vn/cas-backup-v2/casorder-be:0.1
+        imagePullPolicy: Always
+        name: cas-backup-mariadb-seed
+        command: ['order-manage', 'db-seed']
+        volumeMounts:
+        - name: cas-backup-it-vol
+          mountPath: /etc/cas/
+          readOnly: true
+      imagePullSecrets:
+      - name: privatereg
+      volumes:
+      - name: cas-backup-it-vol
+        configMap:
+          name: cas-backup-config
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - until nc -zv $DB_HOST $DB_PORT -w1; do echo 'waiting for db'; sleep 20; done
+        env:
+        - name: DB_HOST
+          value: cas-backup-mariadb
+        - name: DB_PORT
+          value: "3306"
+        image: busybox
+        name: wait-for-mariadb
+      restartPolicy: OnFailure

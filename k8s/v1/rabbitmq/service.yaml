@@ -1,0 +1,22 @@
+###
+# Service for rabbitmq.
+# If you want to access rabbitmq gui service, you can access by using `kubectl port-forward` command.
+# c.f.
+#   kubectl port-forward <rabbitmq_pod_name_here> 15672:15672 -n backend
+#   -> then you can access by http://localhost:15672
+###
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: backend
+  labels:
+    app: rabbitmq
+spec:
+  type: NodePort
+  ports:
+    - name: rabbitmq
+      port: 5672
+      targetPort: rabbitmq
+  selector:
+    app: rabbitmq

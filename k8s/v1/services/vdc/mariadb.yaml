@@ -1,0 +1,165 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: casvdc-mariadb
+  namespace: backend
+  labels:
+    app: casvdc-mariadb
+spec:
+  type: NodePort
+  ports:
+    - name: casvdc-mariadb
+      port: 3306
+      targetPort: 3306
+  selector:
+    app: casvdc-db
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: casvdc-db-data
+  namespace: backend
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 40Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: casvdc-db
+  namespace: backend
+  labels:
+    app: casvdc-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: casvdc-db
+  template:
+    metadata:
+      labels:
+        app: casvdc-db
+        node: backend
+    spec:
+      containers:
+        - name: casvdc-db
+          image: mariadb
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: casvdc-db-p
+              containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: password
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: database
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: casvdc-data-storage
+          resources:
+            requests:
+              memory: 1500Mi
+              cpu: 200m
+            limits:
+              memory: 2Gi
+              cpu: 300m
+      volumes:
+        - name: casvdc-data-storage
+          persistentVolumeClaim:
+            claimName: casvdc-db-data
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: casvdc-db-migrations
+  namespace: backend
+spec:
+  template:
+    metadata:
+      name: casvdc-db-migrations
+    spec:
+      containers:
+      - image: reg.fptcompute.com.vn/dev/casvdc:0.1
+        name: casvdc-db-migrations
+        command: ['vdc-manage', 'db_sync']
+        volumeMounts:
+        - name: casvdc-mg-vol
+          mountPath: /etc/cas/
+          readOnly: true
+      imagePullSecrets:
+      - name: privatereg
+      volumes:
+      - name: casvdc-mg-vol
+        configMap:
+          name: casvdc-config
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - until nc -zv $DB_HOST $DB_PORT -w1; do echo 'waiting for db'; sleep 1; done
+        env:
+        - name: DB_HOST
+          value: casvdc-mariadb
+        - name: DB_PORT
+          value: "3306"
+        image: busybox
+        name: wait-for-mariadb
+      restartPolicy: OnFailure
+---
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: casvdc-db-init-data
+#   namespace: backend
+# spec:
+#   template:
+#     metadata:
+#       name: casvdc-db-init-data
+#     spec:
+#       containers:
+#       - image: reg.fptcompute.com.vn/dev/casvdc:0.1
+#         name: casvdc-db-init-data
+#         command: ['vdc-manage', 'db_data']
+#         volumeMounts:
+#         - name: casvdc-it-vol
+#           mountPath: /etc/cas/
+#           readOnly: true
+#       imagePullSecrets:
+#       - name: privatereg
+#       volumes:
+#       - name: casvdc-it-vol
+#         configMap:
+#           name: casvdc-config
+#       initContainers:
+#       - command:
+#         - /bin/sh
+#         - -c
+#         - until nc -zv $DB_HOST $DB_PORT -w1; do echo 'waiting for db'; sleep 1; done
+#         env:
+#         - name: DB_HOST
+#           value: casvdc-mariadb
+#         - name: DB_PORT
+#           value: "3306"
+#         image: busybox
+#         name: wait-for-mariadb
+#       restartPolicy: OnFailure

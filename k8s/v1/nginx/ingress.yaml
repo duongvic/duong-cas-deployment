@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: api-ingress
+  namespace: backend
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: dev-api
+    kubernetes.io/ingress.allow-http: "false"
+spec:
+  tls:
+  - secretName: nginx-wildcard
+  rules:
+  - host: dev-api.foxcloud.com
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: backend-nginx
+          servicePort: http

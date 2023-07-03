@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  namespace: backend
+  labels:
+    app: mariadb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+        node: backend
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: mariadb
+              containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: password
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb
+                  key: database
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: mariadb-data-storage
+          resources:
+            requests:
+              memory: 1500Mi
+              cpu: 200m
+            limits:
+              memory: 2Gi
+              cpu: 300m
+      volumes:
+        - name: mariadb-data-storage
+          persistentVolumeClaim:
+            claimName: mariadb-data

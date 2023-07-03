@@ -1,0 +1,165 @@
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: casorder-mariadb
+#   namespace: backend
+#   labels:
+#     app: casorder-mariadb
+# spec:
+#   type: NodePort
+#   ports:
+#     - name: casorder-mariadb
+#       port: 3306
+#       targetPort: 3306
+#   selector:
+#     app: casorder-db
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: casorder-db-data
+#   namespace: backend
+# spec:
+#   storageClassName: local-path
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 40Gi
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: casorder-db
+#   namespace: backend
+#   labels:
+#     app: casorder-db
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: casorder-db
+#   template:
+#     metadata:
+#       labels:
+#         app: casorder-db
+#         node: backend
+#     spec:
+#       containers:
+#         - name: casorder-db
+#           image: mariadb
+#           imagePullPolicy: IfNotPresent
+#           ports:
+#             - name: casorder-db-p
+#               containerPort: 3306
+#           env:
+#             - name: MYSQL_ROOT_PASSWORD
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: mariadb
+#                   key: password
+#             - name: MYSQL_USER
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: mariadb
+#                   key: user
+#             - name: MYSQL_PASSWORD
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: mariadb
+#                   key: password
+#             - name: MYSQL_DATABASE
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: mariadb
+#                   key: database
+#           volumeMounts:
+#             - mountPath: /var/lib/mysql
+#               name: casorder-data-storage
+#           resources:
+#             requests:
+#               memory: 1500Mi
+#               cpu: 200m
+#             limits:
+#               memory: 2Gi
+#               cpu: 500m
+#       volumes:
+#         - name: casorder-data-storage
+#           persistentVolumeClaim:
+#             claimName: casorder-db-data
+# ---
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: casorder-db-migrations
+#   namespace: backend
+# spec:
+#   template:
+#     metadata:
+#       name: casorder-db-migrations
+#     spec:
+#       containers:
+#       - image: reg.fptcompute.com.vn/dev/casorder:0.1
+#         name: casorder-db-migrations
+#         command: ['order-manage', 'db_reset']
+#         volumeMounts:
+#         - name: casorder-mg-vol
+#           mountPath: /etc/cas/
+#           readOnly: true
+#       imagePullSecrets:
+#       - name: privatereg
+#       volumes:
+#       - name: casorder-mg-vol
+#         configMap:
+#           name: casorder-config
+#       initContainers:
+#       - command:
+#         - /bin/sh
+#         - -c
+#         - until nc -zv $DB_HOST $DB_PORT -w1; do echo 'waiting for db'; sleep 1; done
+#         env:
+#         - name: DB_HOST
+#           value: casorder-mariadb
+#         - name: DB_PORT
+#           value: "3306"
+#         image: busybox
+#         name: wait-for-mariadb
+#       restartPolicy: OnFailure
+# ---
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: casorder-db-init-data
+#   namespace: backend
+# spec:
+#   template:
+#     metadata:
+#       name: casorder-db-init-data
+#     spec:
+#       containers:
+#       - image: reg.fptcompute.com.vn/dev/casorder:0.1
+#         name: casorder-db-init-data
+#         command: ['order-manage', 'db_data', '--data_file', '/etc/cas/data.json']
+#         volumeMounts:
+#         - name: casorder-it-vol
+#           mountPath: /etc/cas/
+#           readOnly: true
+#       imagePullSecrets:
+#       - name: privatereg
+#       volumes:
+#       - name: casorder-it-vol
+#         configMap:
+#           name: casorder-config
+#       initContainers:
+#       - command:
+#         - /bin/sh
+#         - -c
+#         - until nc -zv $DB_HOST $DB_PORT -w1; do echo 'waiting for db'; sleep 1; done
+#         env:
+#         - name: DB_HOST
+#           value: casorder-mariadb
+#         - name: DB_PORT
+#           value: "3306"
+#         image: busybox
+#         name: wait-for-mariadb
+#       restartPolicy: OnFailure

@@ -1,0 +1,41 @@
+version: "3.6"
+services:
+  gitlab:
+    image: gitlab/gitlab-ee:latest
+    ports:
+      - "22:22"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - vol1:/var/opt/gitlab
+      - vol2:/var/log/gitlab
+      - vol3:/etc/gitlab    
+    configs:
+      - source: gitlab
+        target: /omnibus_config.rb
+    secrets:
+      - gitlab_root_password
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    volumes: 
+      ./config.toml:/etc/gitlab-runner/
+    deploy:
+      mode: replicated
+      replicas: 4
+
+configs:
+  gitlab:
+    file: ./gitlab.rb
+  
+
+secrets:
+  gitlab_root_password:
+    file: ./password.txt
+
+volumes:
+  vol1:
+    driver: local
+  vol2:
+    driver: local
+  vol3:
+    driver: local
